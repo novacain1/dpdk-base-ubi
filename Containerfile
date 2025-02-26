@@ -56,8 +56,8 @@ RUN useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
   chown -R 1001:0 ${APP_ROOT}
 
 # Allows non-root users to use dpdk-testpmd
-#RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/bin/dpdk-testpmd
-#RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/bin/dpdk-test-bbdev
+RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/local/bin/dpdk-testpmd
+RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/local/bin/dpdk-test-bbdev
 
 # Add supplementary group 801 to user 1001 in order to use the VFIO device in a non-privileged pod.
 RUN groupadd -g 801 hugetlbfs
