@@ -20,23 +20,23 @@ ENV \
 
 ENV BUilDER_VERSION 0.2
 ENV DPDK_VER=24.11.1
-ENV DPDK_DIR=/usr/src/dpdk-${DPDK_VER}
+ENV DPDK_DIR=/usr/share/dpdk-stable-${DPDK_VER}
 ENV RTE_TARGET=x86_64-default-linux-gcc
 ENV RTE_EXEC_ENV=linux
 ENV RTE_SDK=${DPDK_DIR}
 
 # Install prerequisite packages
 RUN dnf groupinstall -y "Development Tools" && \
-    dnf install --skip-broken -y wget numactl numactl-devel gcc libibverbs-devel logrotate rdma-core tcpdump python39 sudo && \
+    dnf install --skip-broken -y wget numactl numactl-devel gcc libibverbs-devel logrotate rdma-core tcpdump python3 python3-pip sudo && \
     dnf clean all
 
 # Install Meson, Ninja and pyelftools packages with pip, required to build DPDK. Python >= 3.7 is required
 RUN pip3.9 install meson ninja pyelftools
 
 # Download the DPDK libraries
-RUN wget http://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz -P /usr/src && \
-    tar -xpvf /usr/src/dpdk-${DPDK_VER}.tar.xz -C /usr/src && \
-    rm -f /usr/src/dpdk-${DPDK_VER}.tar.xz
+RUN wget http://fast.dpdk.org/rel/dpdk-${DPDK_VER}.tar.xz -P /usr/share && \
+    tar -xpvf /usr/share/dpdk-${DPDK_VER}.tar.xz -C /usr/share && \
+    rm -f /usr/share/dpdk-${DPDK_VER}.tar.xz
 
 RUN cd ${DPDK_DIR} && \
     meson setup -Dexamples=all -Dplatform=generic build && \
@@ -55,21 +55,10 @@ RUN useradd -u 1001 -r -g 0 -d ${HOME} -s /sbin/nologin \
       -c "Default Application User" default && \
   chown -R 1001:0 ${APP_ROOT}
 
-COPY ./s2i/bin/ /usr/libexec/s2i
-
-RUN setcap cap_ipc_lock=+ep /usr/libexec/s2i/run \
-    && setcap cap_sys_resource=+ep /usr/libexec/s2i/run
-
 # Allows non-root users to use dpdk-testpmd
-RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/bin/dpdk-testpmd
-RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/bin/dpdk-test-bbdev
+#RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/bin/dpdk-testpmd
+#RUN setcap cap_sys_resource,cap_ipc_lock,cap_net_raw+ep /usr/bin/dpdk-test-bbdev
 
 # Add supplementary group 801 to user 1001 in order to use the VFIO device in a non-privileged pod.
 RUN groupadd -g 801 hugetlbfs
 RUN usermod -aG hugetlbfs default
-
-# This is needed for the s2i to work
-# in the pod yaml we still use the runAsUser:0 we w/a the ulimit issue
-USER default
-
-CMD ["/usr/libexec/s2i/usage"]
